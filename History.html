@@ -1,0 +1,99 @@
+// ── HISTORY ───────────────────────────────────────────────
+function renderHist(){
+  if(!CU)return;
+  const tb=document.getElementById('h-body');
+  document.getElementById('h-cnt').textContent=CU.trades.length+' trades';
+  const nb=document.getElementById('no-h');if(nb)nb.style.display=CU.trades.length?'none':'block';
+  tb.innerHTML=CU.trades.map((t,i)=>{
+    const iB=t.t==='buy',up=t.pl>=0;
+    const ynb=t.yn==='YES'?'<span class="yn-y">YES ✓</span>':t.yn==='NO'?'<span class="yn-n">NO ✗</span>':'<span class="yn-m">MAYBE</span>';
+    return`<tr style="border-left:3px solid ${iB?'var(--green)':'var(--red)'}">
+      <td style="color:var(--t3);font-family:monospace">#${CU.trades.length-i}</td>
+      <td><span class="pb ${iB?'g':'r'}">${t.t.toUpperCase()}</span></td>
+      <td><span class="sb2">${t.sym}</span></td>
+      <td style="font-family:monospace">${t.qty}</td>
+      <td style="font-family:monospace">₹${t.px.toFixed(2)}</td>
+      <td style="font-family:monospace">₹${t.tot.toFixed(2)}</td>
+      <td style="font-family:monospace;color:var(--red)">₹${t.fee.toFixed(2)}</td>
+      <td style="font-family:monospace;color:${iB?'var(--t3)':up?'var(--green)':'var(--red)'}">${iB?'—':(up?'+':'-')+'₹'+Math.abs(t.pl).toFixed(2)}</td>
+      <td><span class="sg ${t.sig==='BUY'?'b':t.sig==='SELL'?'s':'h'}">${t.sig}</span></td>
+      <td>${ynb}</td>
+      <td style="font-family:monospace;font-size:10px;color:var(--purple)">${t.conf}%</td>
+      <td style="font-size:10px;color:var(--t3)">${t.time.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',second:'2-digit'})}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ── NAV ────────────────────────────────────────────────────
+function nav(id,btn){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('on'));
+  document.querySelectorAll('.ntab').forEach(b=>b.classList.remove('on'));
+  document.getElementById('pg-'+id).classList.add('on');if(btn)btn.classList.add('on');
+  if(id==='market')buildMkt();
+  if(id==='portfolio')renderHolds();
+  if(id==='history')renderHist();
+  setTimeout(drawCandleChart,50);
+}
+
+// ── NOTIF ──────────────────────────────────────────────────
+function pushN(msg,type){
+  const nc=document.getElementById('nc');
+  const el=document.createElement('div');el.className='notif '+type;
+  el.innerHTML=`<span style="font-size:13px">${type==='ok'?'✓':type==='err'?'✗':'ℹ'}</span><span>${msg}</span>`;
+  nc.appendChild(el);setTimeout(()=>el.remove(),4500);
+}
+function showMsg(id,msg,type){
+  const el=document.getElementById(id);if(!el)return;
+  el.textContent=msg;el.className='tmsg '+type;el.style.display='block';
+  setTimeout(()=>el.style.display='none',5500);
+}
+
+// ── AUTH ────────────────────────────────────────────────────
+function aTab(t){
+  document.getElementById('at-l').className='atab'+(t==='l'?' on':'');
+  document.getElementById('at-r').className='atab'+(t==='r'?' on':'');
+  document.getElementById('af-l').style.display=t==='l'?'flex':'none';
+  document.getElementById('af-r').style.display=t==='r'?'flex':'none';
+}
+function doLogin(){
+  const u=document.getElementById('lu').value.trim(),p=document.getElementById('lp').value;
+  const err=document.getElementById('lerr');
+  if(UDB[u]&&UDB[u].pass===p){
+    CU=UDB[u];CU.username=u;
+    document.getElementById('auth').style.display='none';
+    document.getElementById('app').style.display='flex';
+    document.getElementById('u-av').textContent=u[0].toUpperCase();
+    document.getElementById('u-n').textContent=CU.name.split(' ')[0];
+    err.style.display='none';
+    refreshMetrics();refreshTopBar();popSels();
+    setTimeout(()=>{initCanvasCtx();setupCandleHover();drawCandleChart();refreshChLbl();},120);
+    pushN('Welcome, '+CU.name.split(' ')[0]+'! Live candlestick charts active.','info');
+  } else err.style.display='block';
+}
+function doReg(){
+  const name=document.getElementById('rn').value.trim(),u=document.getElementById('ru').value.trim().toLowerCase();
+  const email=document.getElementById('re').value.trim(),p=document.getElementById('rp').value;
+  const err=document.getElementById('rerr');
+  if(!name||!u||!email||!p){err.textContent='All fields required.';err.style.display='block';return;}
+  if(p.length<6){err.textContent='Password 6+ chars.';err.style.display='block';return;}
+  if(UDB[u]){err.textContent='Username taken.';err.style.display='block';return;}
+  UDB[u]={pass:p,name,email,role:'USER',balance:100000,port:{},trades:[]};
+  err.style.display='none';aTab('l');
+  document.getElementById('lu').value=u;document.getElementById('lp').value=p;
+  pushN('Account created! Sign in.','info');
+}
+function doLogout(){
+  CU=null;document.getElementById('auth').style.display='flex';document.getElementById('app').style.display='none';document.getElementById('lp').value='';
+}
+function clock(){const el=document.getElementById('clk');if(el)el.textContent=new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false})+' IST';}
+
+// Handle resize
+window.addEventListener('resize',()=>{if(CU)drawCandleChart();});
+
+// BOOT
+initMarket();buildTkr();clock();
+setInterval(clock,1000);
+setInterval(tick,1500);
+</script>
+</body>
+</html>
