@@ -1,0 +1,65 @@
+// ═══════════════════════════════════════════════════════
+// SIT STOCKPULSE PRO — LIVE CANDLESTICK CHART ENGINE
+// ═══════════════════════════════════════════════════════
+
+const UDB={
+  demo:{pass:'demo123',name:'Demo Trader',email:'demo@sit.edu.in',role:'USER',balance:100000,port:{},trades:[]},
+  admin:{pass:'admin123',name:'Admin User',email:'admin@sit.edu.in',role:'ADMIN',balance:500000,port:{},trades:[]}
+};
+let CU=null;
+
+const ST={
+  RELIANCE: {n:'Reliance Industries', sec:'Energy',      base:2450, avgVol:4200000},
+  TCS:      {n:'Tata Consultancy',    sec:'Technology',  base:3780, avgVol:1800000},
+  INFY:     {n:'Infosys Limited',     sec:'Technology',  base:1520, avgVol:3100000},
+  WIPRO:    {n:'Wipro Limited',       sec:'Technology',  base:480,  avgVol:5200000},
+  HDFCBANK: {n:'HDFC Bank',           sec:'Financials',  base:1680, avgVol:2200000},
+  ICICIBANK:{n:'ICICI Bank',          sec:'Financials',  base:1025, avgVol:3800000},
+  SBIN:     {n:'State Bank India',    sec:'Financials',  base:560,  avgVol:7100000},
+  BAJFINANCE:{n:'Bajaj Finance',      sec:'Financials',  base:6980, avgVol:820000},
+  HCLTECH:  {n:'HCL Technologies',   sec:'Technology',  base:1340, avgVol:2400000},
+  TATAMOTORS:{n:'Tata Motors',        sec:'Consumer',    base:780,  avgVol:6100000},
+  ONGC:     {n:'ONGC',               sec:'Energy',      base:180,  avgVol:9200000},
+  COALINDIA:{n:'Coal India',          sec:'Energy',      base:230,  avgVol:6800000},
+  NESTLEIND:{n:'Nestle India',        sec:'Consumer',    base:24560,avgVol:180000},
+  SUNPHARMA:{n:'Sun Pharma',          sec:'Healthcare',  base:870,  avgVol:2900000},
+  MARUTI:   {n:'Maruti Suzuki',       sec:'Consumer',    base:10280,avgVol:320000},
+  ADANIENT: {n:'Adani Enterprises',   sec:'Industrials', base:2890, avgVol:1600000},
+  LT:       {n:'Larsen & Toubro',     sec:'Industrials', base:3640, avgVol:950000},
+  NTPC:     {n:'NTPC Limited',        sec:'Utilities',   base:260,  avgVol:11000000},
+  ITC:      {n:'ITC Limited',         sec:'Consumer',    base:420,  avgVol:15000000},
+  POWERGRID:{n:'Power Grid Corp',     sec:'Utilities',   base:290,  avgVol:8500000},
+};
+
+const M={};       // live market data
+const CANDLES={}; // { SYM: [{o,h,l,c,v,ts},...] }
+const CMAX=80;    // max candles to show
+
+const rf=(a,b)=>a+Math.random()*(b-a);
+const bd=(v,d=2)=>parseFloat(v.toFixed(d));
+const fINR=(v,s=false)=>(s&&v>0?'+':(v<0&&s?'-':''))+'₹'+Math.abs(v).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});
+const fV=v=>v>=1e7?bd(v/1e7,1)+'Cr':v>=1e5?bd(v/1e5,1)+'L':v>=1e3?bd(v/1e3,0)+'K':v;
+
+// ── INIT ────────────────────────────────────────────────
+function initMarket(){
+  Object.entries(ST).forEach(([sym,s])=>{
+    const cp=rf(-3.5,3.5),px=bd(s.base*(1+cp/100));
+    const rsi=bd(rf(22,78)),ma20=bd(s.base*(1+rf(-0.025,0.025)));
+    M[sym]={px,prev:s.base,chg:bd(px-s.base),cp:bd(cp,3),
+      open:bd(s.base*(1+rf(-0.006,0.006))),hi:bd(px*1.014),lo:bd(px*.987),
+      vol:Math.round(rf(.5,1.6)*s.avgVol),pred:bd(px*(1+rf(-0.03,0.04))),rsi,ma20,
+      sig:rsi<35?'BUY':rsi>65?'SELL':'HOLD'};
+    // seed historical candles
+    CANDLES[sym]=[];
+    let p=s.base;
+    for(let i=0;i<55;i++){
+      const o=bd(p);const mv=rf(-0.012,0.012);
+      const c=bd(p*(1+mv));
+      const h=bd(Math.max(o,c)*(1+rf(0,0.006)));
+      const l=bd(Math.min(o,c)*(1-rf(0,0.006)));
+      const v=Math.round(rf(0.3,1.4)*s.avgVol);
+      CANDLES[sym].push({o,h,l,c,v,ts:Date.now()-((55-i)*90000)});
+      p=c;
+    }
+  });
+}
