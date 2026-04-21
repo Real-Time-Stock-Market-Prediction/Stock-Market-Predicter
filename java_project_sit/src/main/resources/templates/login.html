@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>StockPulse — Sign In</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com"/>
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+    <link rel="stylesheet" th:href="@{/css/app.css}"/>
+    <link rel="stylesheet" th:href="@{/css/auth.css}"/>
+</head>
+<body class="auth-body">
+
+<div class="auth-split">
+    <!-- Left: Branding panel -->
+    <div class="auth-brand">
+        <div class="brand-content">
+            <div class="brand-logo">
+                <span class="logo-icon-lg">⬡</span>
+                <span class="logo-text-lg">StockPulse</span>
+            </div>
+            <h2 class="brand-headline">Trade smarter<br/>with AI-powered<br/>predictions.</h2>
+            <p class="brand-sub">Real-time market data · ML price forecasts · Live portfolio tracking</p>
+            <div class="brand-stats">
+                <div class="brand-stat"><span class="stat-num">20+</span><span class="stat-label">Live Stocks</span></div>
+                <div class="brand-stat"><span class="stat-num">AI</span><span class="stat-label">Price Prediction</span></div>
+                <div class="brand-stat"><span class="stat-num">$100K</span><span class="stat-label">Start Balance</span></div>
+            </div>
+        </div>
+        <div class="brand-chart-bg"></div>
+    </div>
+
+    <!-- Right: Login form -->
+    <div class="auth-form-side">
+        <div class="auth-card">
+            <h1 class="auth-title">Welcome back</h1>
+            <p class="auth-sub">Sign in to your trading account</p>
+
+            <div th:if="${param.error}" class="alert alert-error">
+                Invalid username or password. Please try again.
+            </div>
+            <div th:if="${param.logout}" class="alert alert-success">
+                You've been signed out successfully.
+            </div>
+            <div th:if="${param.registered}" class="alert alert-success">
+                Account created! Sign in to start trading.
+            </div>
+
+            <form th:action="@{/login}" method="post" class="auth-form">
+                <div class="auth-field">
+                    <label class="auth-label">Username</label>
+                    <input type="text" name="username" class="auth-input" placeholder="Enter username" autocomplete="username" required/>
+                </div>
+                <div class="auth-field">
+                    <label class="auth-label">Password</label>
+                    <input type="password" name="password" class="auth-input" placeholder="Enter password" autocomplete="current-password" required/>
+                </div>
+                <button type="submit" class="auth-btn">Sign In →</button>
+            </form>
+
+            <div class="auth-demo-hint">
+                Demo account: <strong>demo</strong> / <strong>demo123</strong>
+            </div>
+            <p class="auth-switch">Don't have an account? <a th:href="@{/register}">Create one free</a></p>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>

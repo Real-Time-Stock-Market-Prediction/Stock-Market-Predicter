@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>StockPulse — Portfolio</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com"/>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700;800&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+    <link rel="stylesheet" th:href="@{/css/app.css}"/>
+</head>
+<body>
+
+<aside class="sidebar">
+    <div class="sidebar-logo">
+        <span class="logo-icon">⬡</span>
+        <span class="logo-text">StockPulse</span>
+    </div>
+    <nav class="sidebar-nav">
+        <a th:href="@{/dashboard}" class="nav-item">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+            Dashboard
+        </a>
+        <a th:href="@{/market}" class="nav-item">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+            Market
+        </a>
+        <a th:href="@{/portfolio}" class="nav-item active">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+            Portfolio
+        </a>
+        <a th:href="@{/trades}" class="nav-item">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 3H5a2 2 0 00-2 2v4m6-6h10a2 2 0 012 2v4M9 3v18m0 0h10a2 2 0 002-2V9M9 21H5a2 2 0 01-2-2V9m0 0h18"/></svg>
+            Trade History
+        </a>
+    </nav>
+    <div class="sidebar-footer">
+        <div class="user-card">
+            <div class="user-avatar" th:text="${#strings.substring(user.username, 0, 1).toUpperCase()}">D</div>
+            <div class="user-info">
+                <div class="user-name" th:text="${user.fullName ?: user.username}">Demo Trader</div>
+                <div class="user-balance">$<span th:text="${#numbers.formatDecimal(user.balance, 1, 2)}">100,000.00</span></div>
+            </div>
+        </div>
+        <a th:href="@{/logout}" class="logout-btn">Sign Out</a>
+    </div>
+</aside>
+
+<main class="main-content">
+    <header class="page-header">
+        <div>
+            <h1 class="page-title">My Portfolio</h1>
+            <p class="page-subtitle">Track your holdings and performance</p>
+        </div>
+    </header>
+
+    <!-- Summary Cards -->
+    <div class="metrics-grid">
+        <div class="metric-card">
+            <div class="metric-label">Portfolio Value</div>
+            <div class="metric-value">$<span th:text="${#numbers.formatDecimal(portfolioValue, 1, 2)}">0.00</span></div>
+            <div class="metric-sub">Current market value</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-label">Total Invested</div>
+            <div class="metric-value">$<span th:text="${#numbers.formatDecimal(totalInvested, 1, 2)}">0.00</span></div>
+            <div class="metric-sub">Cost basis</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-label">Total P&amp;L</div>
+            <div class="metric-value" th:classappend="${totalProfitLoss >= 0} ? 'gain' : 'loss'">
+                <span th:text="${totalProfitLoss >= 0 ? '+$' : '-$'}"></span>
+                <span th:text="${#numbers.formatDecimal(totalProfitLoss.abs(), 1, 2)}">0.00</span>
+            </div>
+            <div class="metric-sub">
+                <span th:text="${#numbers.formatDecimal(totalProfitLossPercent, 1, 2)}">0.00</span>% total return
+            </div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-label">Holdings</div>
+            <div class="metric-value" th:text="${holdings.size()}">0</div>
+            <div class="metric-sub">Unique positions</div>
+        </div>
+    </div>
+
+    <!-- Portfolio Allocation Chart -->
+    <div class="chart-trade-grid" th:if="${!holdings.isEmpty()}">
+        <div class="panel chart-panel">
+            <div class="panel-header"><span class="panel-title">Portfolio Allocation</span></div>
+            <div style="position:relative;height:280px;display:flex;align-items:center;justify-content:center;">
+                <canvas id="allocationChart"></canvas>
+            </div>
+        </div>
+        <div class="panel">
+            <div class="panel-header"><span class="panel-title">P&amp;L Breakdown</span></div>
+            <div style="position:relative;height:280px;">
+                <canvas id="pnlChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Holdings Table -->
+    <div class="panel">
+        <div class="panel-header"><span class="panel-title">Holdings</span></div>
+        <div th:if="${holdings.isEmpty()}" class="empty-state">
+            <div class="empty-icon">📊</div>
+            <p>No holdings yet. <a th:href="@{/dashboard}">Start trading →</a></p>
+        </div>
+        <div class="stock-table-wrap" th:if="${!holdings.isEmpty()}">
+            <table class="stock-table">
+                <thead>
+                    <tr>
+                        <th>Symbol</th>
+                        <th>Name</th>
+                        <th>Qty</th>
+                        <th>Avg Buy Price</th>
+                        <th>Current Price</th>
+                        <th>Total Invested</th>
+                        <th>Current Value</th>
+                        <th>P&amp;L</th>
+                        <th>P&amp;L %</th>
+                        <th>AI Target</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="p : ${holdings}" class="portfolio-row">
+                        <td><span class="symbol-badge" th:text="${p.stockSymbol}">AAPL</span></td>
+                        <td class="stock-name-cell" th:text="${p.stock?.name ?: p.stockSymbol}">Apple Inc.</td>
+                        <td th:text="${p.quantity}">10</td>
+                        <td th:text="${'$' + #numbers.formatDecimal(p.averageBuyPrice, 1, 2)}">$180.00</td>
+                        <td class="price-cell" th:text="${p.stock != null ? '$' + #numbers.formatDecimal(p.stock.currentPrice, 1, 2) : 'N/A'}">$189.50</td>
+                        <td th:text="${'$' + #numbers.formatDecimal(p.totalInvested, 1, 2)}">$1,800.00</td>
+                        <td th:text="${'$' + #numbers.formatDecimal(p.currentValue, 1, 2)}">$1,895.00</td>
+                        <td th:classappend="${p.profitLoss >= 0} ? 'gain' : 'loss'"
+                            th:text="${(p.profitLoss >= 0 ? '+$' : '-$') + #numbers.formatDecimal(p.profitLoss.abs(), 1, 2)}">+$95.00</td>
+                        <td>
+                            <span th:classappend="${p.profitLossPercent >= 0} ? 'badge-gain' : 'badge-loss'"
+                                  th:text="${(p.profitLossPercent >= 0 ? '+' : '') + #numbers.formatDecimal(p.profitLossPercent, 1, 2) + '%'}">+5.28%</span>
+                        </td>
+                        <td>
+                            <span class="prediction-badge" th:if="${p.stock?.predictedPrice != null}"
+                                  th:text="${'$' + #numbers.formatDecimal(p.stock.predictedPrice, 1, 2)}">$195.00</span>
+                            <span class="prediction-badge pending" th:if="${p.stock?.predictedPrice == null}">—</span>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script th:src="@{/js/app.js}"></script>
+<script th:inline="javascript">
+    const holdings = /*[[${holdings}]]*/ [];
+    const symbols = [];
+    const values = [];
+    const pnls = [];
+    const colors = ['#00d4aa','#6366f1','#f59e0b','#ef4444','#10b981','#3b82f6','#8b5cf6','#ec4899','#14b8a6','#f97316'];
+
+    document.addEventListener('DOMContentLoaded', () => {
+        fetch('/api/portfolio').then(r => r.json()).then(data => {
+            if (!data.holdings || data.holdings.length === 0) return;
+            data.holdings.forEach(h => {
+                symbols.push(h.symbol);
+                values.push(parseFloat(h.currentValue).toFixed(2));
+                pnls.push(parseFloat(h.profitLoss).toFixed(2));
+            });
+
+            // Allocation donut
+            const allocCtx = document.getElementById('allocationChart');
+            if (allocCtx) {
+                new Chart(allocCtx, {
+                    type: 'doughnut',
+                    data: { labels: symbols, datasets: [{ data: values, backgroundColor: colors, borderWidth: 0 }] },
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { color: '#94a3b8', font: { family: 'Inter' } } } }, cutout: '65%' }
+                });
+            }
+
+            // P&L bar
+            const pnlCtx = document.getElementById('pnlChart');
+            if (pnlCtx) {
+                new Chart(pnlCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: symbols,
+                        datasets: [{
+                            label: 'P&L ($)',
+                            data: pnls,
+                            backgroundColor: pnls.map(v => v >= 0 ? 'rgba(0,212,170,0.7)' : 'rgba(239,68,68,0.7)'),
+                            borderRadius: 4
+                        }]
+                    },
+                    options: {
+                        responsive: true, maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            x: { ticks: { color: '#64748b' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+                            y: { ticks: { color: '#64748b', callback: v => '$' + v }, grid: { color: 'rgba(255,255,255,0.05)' } }
+                        }
+                    }
+                });
+            }
+        });
+    });
+</script>
+</body>
+</html>
